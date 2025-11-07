@@ -23,16 +23,6 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    h1,
-    h2,
-    h3,
-    h4,
-    h5,
-    h6 {
-      font-family: 'Inter', sans-serif;
-      font-weight: 600;
-    }
-
     .App {
       padding: 20px;
       max-width: 1000px;
@@ -62,7 +52,6 @@
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
-      transition: background-color 0.2s;
     }
 
     .file-label:hover {
@@ -77,7 +66,6 @@
       border-radius: 4px;
       cursor: pointer;
       font-size: 14px;
-      transition: background-color 0.2s;
     }
 
     .clear-button:hover:not(:disabled) {
@@ -101,18 +89,11 @@
       border: 2px solid;
       border-radius: 4px;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
       padding: 0;
     }
 
-    .color-option:hover {
-      transform: scale(1.1);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
     .color-option.active {
-      transform: scale(1.15);
-      box-shadow: 0 0 0 2px #333, 0 2px 6px rgba(0, 0, 0, 0.3);
+      border-width: 3px;
     }
 
     .pdf-container {
@@ -173,8 +154,6 @@
       const [currentHighlight, setCurrentHighlight] = useState(null);
       const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0]);
       const containerRef = useRef(null);
-      const [pdfDoc, setPdfDoc] = useState(null);
-      const [pageNum, setPageNum] = useState(1);
       const [pdfPage, setPdfPage] = useState(null);
       const canvasRef = useRef(null);
 
@@ -193,11 +172,8 @@
         try {
           const loadingTask = pdfjsLib.getDocument(url);
           const pdf = await loadingTask.promise;
-          setPdfDoc(pdf);
-
           const page = await pdf.getPage(1);
           setPdfPage(page);
-
           renderPage(page);
         } catch (error) {
           console.error('Error loading PDF:', error);
@@ -226,7 +202,6 @@
           if (fileUrl) {
             URL.revokeObjectURL(fileUrl);
           }
-          setPdfDoc(null);
           setPdfPage(null);
         };
       }, [fileUrl]);
