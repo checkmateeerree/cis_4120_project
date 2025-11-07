@@ -9,4 +9,4 @@ Clone the entire repository and enter it in VSCode, and to run a specific protot
 
 *For the LLM AI Prototype, it requires an API Key, if you want to test run it, contact us to get access to the API Key.
 
-### AI Attribution: We used AI to aid us with formatting and style.
+### AI Attribution: We used AI to aid us with debugging syntax issues.
