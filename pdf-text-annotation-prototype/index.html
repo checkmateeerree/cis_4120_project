@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Text Annotations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .App {
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      font-weight: 400;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    .file-label {
+      padding: 8px 16px;
+      background-color: #333;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .file-label:hover {
+      background-color: #555;
+    }
+
+    .clear-button {
+      padding: 8px 16px;
+      background-color: #666;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .clear-button:hover:not(:disabled) {
+      background-color: #888;
+    }
+
+    .clear-button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .instructions {
+      padding: 60px 20px;
+      text-align: center;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .pdf-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    .pdf-wrapper {
+      position: relative;
+      display: inline-block;
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    .annotation-marker {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: #666;
+      border: 1px solid #333;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: white;
+      z-index: 10;
+    }
+
+    .annotation-marker.has-comment {
+      background-color: #333;
+    }
+
+    .annotation-comment {
+      position: absolute;
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      min-width: 200px;
+      max-width: 300px;
+      z-index: 20;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .annotation-comment textarea {
+      width: 100%;
+      min-height: 60px;
+      border: 1px solid #ccc;
+      padding: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      margin-bottom: 8px;
+    }
+
+    .annotation-comment textarea:focus {
+      outline: none;
+      border-color: #666;
+    }
+
+    .annotation-comment-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .annotation-comment button {
+      padding: 4px 12px;
+      border: 1px solid #ccc;
+      background-color: white;
+      color: #666;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .save-button {
+      background-color: #333 !important;
+      color: white !important;
+      border-color: #333 !important;
+    }
+
+    .save-button:hover {
+      background-color: #555 !important;
+    }
+
+    .delete-button {
+      background-color: white;
+      color: #666;
+    }
+
+    .delete-button:hover {
+      background-color: #f5f5f5;
+    }
+
+    .close-button {
+      background-color: white;
+      color: #666;
+    }
+
+    .close-button:hover {
+      background-color: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+  
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    function AnnotationMarker({ annotation, onMarkerClick, onDelete }) {
+      const [showComment, setShowComment] = useState(false);
+      const [commentText, setCommentText] = useState(annotation.comment || '');
+      const [isEditing, setIsEditing] = useState(!annotation.comment);
+      const commentRef = useRef(null);
+
+      useEffect(() => {
+        if (showComment && commentRef.current) {
+          commentRef.current.focus();
+        }
+      }, [showComment, isEditing]);
+
+      const handleMarkerClick = (e) => {
+        e.stopPropagation();
+        setShowComment(!showComment);
+        if (!annotation.comment) {
+          setIsEditing(true);
+        }
+      };
+
+      const handleSave = () => {
+        annotation.comment = commentText;
+        setIsEditing(false);
+        onMarkerClick(annotation);
+      };
+
+      const handleDelete = () => {
+        onDelete(annotation.id);
+        setShowComment(false);
+      };
+
+      const handleClose = () => {
+        setShowComment(false);
+        setIsEditing(false);
+        if (!annotation.comment) {
+          setCommentText('');
+        }
+      };
+
+      return (
+        <>
+          <div
+            className={`annotation-marker ${annotation.comment ? 'has-comment' : ''}`}
+            style={{
+              left: `${annotation.x}px`,
+              top: `${annotation.y}px`,
+            }}
+            onClick={handleMarkerClick}
+            title={annotation.comment || 'Click to add comment'}
+          >
+            {annotation.comment ? '•' : '+'}
+          </div>
+          {showComment && (
+            <div
+              className="annotation-comment"
+              style={{
+                left: `${annotation.x + 30}px`,
+                top: `${annotation.y}px`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {isEditing ? (
+                <>
+                  <textarea
+                    ref={commentRef}
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Enter your comment..."
+                  />
+                  <div className="annotation-comment-actions">
+                    <button className="save-button" onClick={handleSave}>
+                      Save
+                    </button>
+                    <button className="close-button" onClick={handleClose}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ marginBottom: '8px' }}>{annotation.comment}</div>
+                  <div className="annotation-comment-actions">
+                    <button className="save-button" onClick={() => setIsEditing(true)}>
+                      Edit
+                    </button>
+                    <button className="delete-button" onClick={handleDelete}>
+                      Delete
+                    </button>
+                    <button className="close-button" onClick={handleClose}>
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </>
+      );
+    }
+
+    function App() {
+      const [file, setFile] = useState(null);
+      const [fileUrl, setFileUrl] = useState(null);
+      const [annotations, setAnnotations] = useState([]);
+      const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+      const containerRef = useRef(null);
+      const [pdfDoc, setPdfDoc] = useState(null);
+      const [pdfPage, setPdfPage] = useState(null);
+      const canvasRef = useRef(null);
+
+      const onFileChange = (event) => {
+        const uploadedFile = event.target.files[0];
+        if (uploadedFile) {
+          const url = URL.createObjectURL(uploadedFile);
+          setFile(uploadedFile);
+          setFileUrl(url);
+          setAnnotations([]);
+          setSelectedAnnotation(null);
+          loadPDF(url);
+        }
+      };
+
+      const loadPDF = async (url) => {
+        try {
+          const loadingTask = pdfjsLib.getDocument(url);
+          const pdf = await loadingTask.promise;
+          setPdfDoc(pdf);
+          
+          const page = await pdf.getPage(1);
+          setPdfPage(page);
+          
+          renderPage(page);
+        } catch (error) {
+          console.error('Error loading PDF:', error);
+        }
+      };
+
+      const renderPage = async (page) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        
+        const viewport = page.getViewport({ scale: 1.5 });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        const context = canvas.getContext('2d');
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport
+        };
+        
+        await page.render(renderContext).promise;
+      };
+
+      useEffect(() => {
+        return () => {
+          if (fileUrl) {
+            URL.revokeObjectURL(fileUrl);
+          }
+          setPdfDoc(null);
+          setPdfPage(null);
+        };
+      }, [fileUrl]);
+
+      const handlePdfClick = (e) => {
+        if (!containerRef.current) return;
+        
+        if (e.target.tagName === 'CANVAS') {
+          const rect = containerRef.current.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          
+          const newAnnotation = {
+            id: Date.now(),
+            x: x - 12,
+            y: y - 12,
+            comment: ''
+          };
+          
+          setAnnotations([...annotations, newAnnotation]);
+          setSelectedAnnotation(newAnnotation.id);
+        }
+      };
+
+      const handleAnnotationUpdate = (updatedAnnotation) => {
+        setAnnotations(annotations.map(ann => 
+          ann.id === updatedAnnotation.id ? updatedAnnotation : ann
+        ));
+      };
+
+      const handleAnnotationDelete = (id) => {
+        setAnnotations(annotations.filter(ann => ann.id !== id));
+        if (selectedAnnotation === id) {
+          setSelectedAnnotation(null);
+        }
+      };
+
+      useEffect(() => {
+        const handleClickOutside = (e) => {
+          if (!e.target.closest('.annotation-marker') && !e.target.closest('.annotation-comment')) {
+            setSelectedAnnotation(null);
+          }
+        };
+        
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+      }, []);
+
+      return (
+        <div className="App">
+          <div className="controls">
+            <input 
+              type="file" 
+              accept=".pdf" 
+              onChange={onFileChange}
+              id="file-input"
+            />
+            <label htmlFor="file-input" className="file-label">
+              Upload PDF
+            </label>
+            {file && (
+              <button 
+                onClick={() => {
+                  setAnnotations([]);
+                  setSelectedAnnotation(null);
+                }} 
+                disabled={annotations.length === 0}
+                className="clear-button"
+              >
+                Clear All
+              </button>
+            )}
+          </div>
+
+
+          {file && (
+            <div className="pdf-container">
+              <div
+                ref={containerRef}
+                className="pdf-wrapper"
+                onClick={handlePdfClick}
+              >
+                <canvas ref={canvasRef}></canvas>
+
+                {annotations.map((annotation) => (
+                  <AnnotationMarker
+                    key={annotation.id}
+                    annotation={annotation}
+                    onMarkerClick={handleAnnotationUpdate}
+                    onDelete={handleAnnotationDelete}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
+
