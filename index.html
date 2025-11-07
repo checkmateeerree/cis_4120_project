@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Hello Styles</title>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useEffect } = React;
+
+      function HelloStyles() {
+        useEffect(() => {
+          feather.replace();
+        });
+
+        const COLORS = [
+          ["Dominant", "#0A0A18"],
+          ["Secondary", "#C3C3E1"],
+          ["Red", "#FF3A3A"],
+          ["Yellow", "#FFD747"],
+          ["Green", "#65DC65"],
+          ["Blue", "#6577FF"],
+          ["Purple", "#B17AFE"],
+        ];
+
+        return (
+          <div className="wrap">
+            <header>
+              <h1>Hello Styles</h1>
+            </header>
+
+            <section>
+              <h2>Typography</h2>
+              <p>
+                This paragraph uses Inter 400. Headings use Inter 600.
+              </p>
+            </section>
+
+            <section>
+              <h2>Color palette</h2>
+              <div className="palette">
+                {COLORS.map(([name, hex]) => (
+                  <div className="sw" key={name}>
+                    <div className="swatch" style={{ background: hex }}></div>
+                    <div className="meta">
+                      <span>{name}</span>
+                      <code>{hex}</code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h2>Feather icons</h2>
+              <div className="icons">
+                <i data-feather="home" style={{ color: "#0A0A18" }}></i>
+                <i data-feather="heart" style={{ color: "#FF3A3A" }}></i>
+                <i data-feather="star" style={{ color: "#FFD747" }}></i>
+                <i data-feather="check-circle" style={{ color: "#65DC65" }}></i>
+                <i data-feather="alert-triangle" style={{ color: "#6577FF" }}></i>
+                <i data-feather="bookmark" style={{ color: "#B17AFE" }}></i>
+              </div>
+            </section>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<HelloStyles />);
+    </script>
+  </body>
+</html>

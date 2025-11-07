@@ -1,0 +1,53 @@
+body {
+  margin: 0;
+  font-family: Inter, system-ui, Arial;
+  background: white;
+  color: black;
+}
+
+.wrap {
+  max-width: 780px;
+  margin: auto;
+  padding: 32px;
+}
+
+h1,
+h2 {
+  font-weight: 600;
+  margin: 0;
+}
+
+p {
+  font-weight: 400;
+  margin: 10px 0 0;
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.sw {
+  border: 1px solid #00000022;
+}
+
+.swatch {
+  height: 80px;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  opacity: 0.9;
+}
+
+.icons {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
