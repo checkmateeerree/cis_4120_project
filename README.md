@@ -7,6 +7,6 @@ Our Implementation Prototypes for Assignment 5
 
 Clone the entire repository and enter it in VSCode, and to run a specific prototype, enter into that prototype's directory and click the Go Live button at the bottom of VSCode.
 
-**For the LLM AI Prototype, it requires an API Key, if you want to test run it, please refer to the Google Doc for instructions.**
+**For the LLM AI Prototype, testing it requires an API Key. If you want to test run it, please refer to the Google Doc for instructions.**
 
 ### AI Attribution: We used AI to aid us with debugging syntax issues.
