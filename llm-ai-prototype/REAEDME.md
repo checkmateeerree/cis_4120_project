@@ -4,7 +4,7 @@ For the LLM AI Prototype specifically, testing it requires an API Key that can b
 
 In order to run it, you must create a config.js file in the same directory as the index.html file, and paste this code in it:
 
-const CONFIG = { MISTRAL_API_KEY: (API KEY FOUND IN GOOGLE DOC SUBMISSION) };
+const CONFIG = { MISTRAL_API_KEY: (INPUT SPECIFIC API KEY FOUND IN GOOGLE DOC SUBMISSION!) };
 
 Also, sometimes there may be a 429 error for this LLM part because we are using a free LLM API, so please click the Ask button again (multiple times if needed until the LLM works) if you encounter a 429 error.
 
