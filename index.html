@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Progress Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f5;
+            color: #0A0A18;
+        }
+
+        /* Design System Colors */
+        :root {
+            --dominant: #0A0A18;
+            --secondary: #C3C3E1;
+            --red: #FF3A3A;
+            --yellow: #FFD747;
+            --green: #65DC65;
+            --blue: #6577FF;
+            --purple: #B17AFE;
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--dominant);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .nav-button {
+            background-color: transparent;
+            color: white;
+            border: 2px solid white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .nav-button:hover {
+            background-color: white;
+            color: var(--dominant);
+        }
+
+        .nav-button.active {
+            background-color: var(--blue);
+            border-color: var(--blue);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Composer Gallery */
+        .composer-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .composer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .composer-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+        }
+
+        .composer-image {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: white;
+        }
+
+        .composer-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--dominant);
+        }
+
+        .composer-piece-count {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        /* Piece List */
+        .piece-list {
+            margin-top: 2rem;
+        }
+
+        .piece-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .piece-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .piece-info h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .piece-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--blue));
+            transition: width 0.3s;
+        }
+
+        .difficulty-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .difficulty-easy { background: var(--green); color: white; }
+        .difficulty-medium { background: var(--yellow); color: var(--dominant); }
+        .difficulty-hard { background: var(--red); color: white; }
+
+        /* Piece Detail */
+        .piece-detail {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .piece-header {
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .piece-header h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .piece-header-meta {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .pdf-viewer-container {
+            margin-top: 2rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #pdf-canvas {
+            width: 100%;
+            display: block;
+        }
+
+        .annotation-marker {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: var(--red);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .annotation-marker.has-comment {
+            background-color: var(--blue);
+        }
+
+        .annotation-popup {
+            position: absolute;
+            background: white;
+            border: 2px solid var(--blue);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 200;
+            min-width: 250px;
+            max-width: 400px;
+        }
+
+        .annotation-popup textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .annotation-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Calendar */
+        .calendar-container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 600;
+            padding: 0.75rem;
+            color: #666;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0.5rem;
+            min-height: 100px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .calendar-day:hover {
+            background: #f9f9f9;
+            border-color: var(--blue);
+        }
+
+        .calendar-day.other-month {
+            background: #f5f5f5;
+            color: #999;
+        }
+
+        .calendar-day.today {
+            border: 2px solid var(--blue);
+            background: #f0f4ff;
+        }
+
+        .day-number {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .calendar-piece {
+            background: var(--blue);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .button {
+            background-color: var(--blue);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .button:hover {
+            background-color: #5568e6;
+            transform: translateY(-2px);
+        }
+
+        .button.secondary {
+            background-color: var(--secondary);
+            color: var(--dominant);
+        }
+
+        .button.danger {
+            background-color: var(--red);
+        }
+
+        .button.small {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--blue);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: var(--blue);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+        }
+
+        .back-button:hover {
+            background: #f0f4ff;
+            border-radius: 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Initialize PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Utility functions for localStorage
+        const storage = {
+            get(key, defaultValue = null) {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : defaultValue;
+            },
+            set(key, value) {
+                localStorage.setItem(key, JSON.stringify(value));
+            }
+        };
+
+        // Initialize sample data if not exists
+        const initializeSampleData = () => {
+            if (!storage.get('composers')) {
+                const sampleComposers = [
+                    { id: 'mozart', name: 'Wolfgang Amadeus Mozart', emoji: '🎹' },
+                    { id: 'beethoven', name: 'Ludwig van Beethoven', emoji: '🎼' },
+                    { id: 'bach', name: 'Johann Sebastian Bach', emoji: '🎻' },
+                    { id: 'chopin', name: 'Frédéric Chopin', emoji: '🎵' }
+                ];
+                storage.set('composers', sampleComposers);
+            }
+
+            if (!storage.get('pieces')) {
+                const today = new Date();
+                const samplePieces = [
+                    {
+                        id: '1',
+                        composerId: 'mozart',
+                        title: 'Piano Sonata No. 16 in C Major',
+                        progress: 65,
+                        difficulty: 'medium',
+                        dueDate: new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        notes: [],
+                        pdfUrl: null
+                    },
+                    {
+                        id: '2',
+                        composerId: 'beethoven',
+                        title: 'Moonlight Sonata',
+                        progress: 30,
+                        difficulty: 'hard',
+                        dueDate: new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        notes: [],
+                        pdfUrl: null
+                    },
+                    {
+                        id: '3',
+                        composerId: 'bach',
+                        title: 'Cello Suite No. 1',
+                        progress: 85,
+                        difficulty: 'medium',
+                        dueDate: new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        notes: [],
+                        pdfUrl: null
+                    },
+                    {
+                        id: '4',
+                        composerId: 'chopin',
+                        title: 'Nocturne in E-flat Major',
+                        progress: 45,
+                        difficulty: 'easy',
+                        dueDate: new Date(today.getTime() + 21 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        notes: [],
+                        pdfUrl: null
+                    }
+                ];
+                storage.set('pieces', samplePieces);
+            }
+        };
+
+        // Main App Component
+        function App() {
+            const [view, setView] = useState('home');
+            const [selectedComposer, setSelectedComposer] = useState(null);
+            const [selectedPiece, setSelectedPiece] = useState(null);
+            const [showModal, setShowModal] = useState(false);
+            const [modalType, setModalType] = useState('');
+            const [composers, setComposers] = useState([]);
+            const [pieces, setPieces] = useState([]);
+
+            useEffect(() => {
+                initializeSampleData();
+                loadData();
+            }, []);
+
+            const loadData = () => {
+                setComposers(storage.get('composers', []));
+                setPieces(storage.get('pieces', []));
+            };
+
+            const saveComposers = (newComposers) => {
+                storage.set('composers', newComposers);
+                setComposers(newComposers);
+            };
+
+            const savePieces = (newPieces) => {
+                storage.set('pieces', newPieces);
+                setPieces(newPieces);
+            };
+
+            const openModal = (type) => {
+                setModalType(type);
+                setShowModal(true);
+            };
+
+            const closeModal = () => {
+                setShowModal(false);
+                setModalType('');
+            };
+
+            const navigateToComposer = (composer) => {
+                setSelectedComposer(composer);
+                setView('composer');
+            };
+
+            const navigateToPiece = (piece) => {
+                setSelectedPiece(piece);
+                setView('piece');
+            };
+
+            const navigateHome = () => {
+                setView('home');
+                setSelectedComposer(null);
+                setSelectedPiece(null);
+            };
+
+            return (
+                <div>
+                    <Header
+                        view={view}
+                        setView={setView}
+                        openModal={openModal}
+                    />
+
+                    <div className="container">
+                        {view === 'home' && (
+                            <HomeView
+                                composers={composers}
+                                pieces={pieces}
+                                navigateToComposer={navigateToComposer}
+                                openModal={openModal}
+                            />
+                        )}
+
+                        {view === 'composer' && selectedComposer && (
+                            <ComposerView
+                                composer={selectedComposer}
+                                pieces={pieces.filter(p => p.composerId === selectedComposer.id)}
+                                navigateToPiece={navigateToPiece}
+                                navigateHome={navigateHome}
+                                openModal={openModal}
+                            />
+                        )}
+
+                        {view === 'piece' && selectedPiece && (
+                            <PieceDetailView
+                                piece={selectedPiece}
+                                pieces={pieces}
+                                savePieces={savePieces}
+                                navigateHome={navigateHome}
+                                composers={composers}
+                            />
+                        )}
+
+                        {view === 'calendar' && (
+                            <CalendarView
+                                pieces={pieces}
+                                composers={composers}
+                                navigateToPiece={navigateToPiece}
+                            />
+                        )}
+                    </div>
+
+                    {showModal && (
+                        <Modal
+                            type={modalType}
+                            closeModal={closeModal}
+                            composers={composers}
+                            saveComposers={saveComposers}
+                            pieces={pieces}
+                            savePieces={savePieces}
+                            selectedComposer={selectedComposer}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        // Header Component
+        function Header({ view, setView, openModal }) {
+            return (
+                <div className="header">
+                    <h1>🎵 Music Progress Tracker</h1>
+                    <div className="nav-buttons">
+                        <button
+                            className={`nav-button ${view === 'home' ? 'active' : ''}`}
+                            onClick={() => setView('home')}
+                        >
+                            Home
+                        </button>
+                        <button
+                            className={`nav-button ${view === 'calendar' ? 'active' : ''}`}
+                            onClick={() => setView('calendar')}
+                        >
+                            Calendar
+                        </button>
+                        <button
+                            className="nav-button"
+                            onClick={() => openModal('addComposer')}
+                        >
+                            + Add Composer
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Home View Component
+        function HomeView({ composers, pieces, navigateToComposer, openModal }) {
+            const stats = {
+                totalPieces: pieces.length,
+                avgProgress: pieces.length > 0
+                    ? Math.round(pieces.reduce((sum, p) => sum + p.progress, 0) / pieces.length)
+                    : 0,
+                upcomingDeadlines: pieces.filter(p => {
+                    const daysUntil = Math.ceil((new Date(p.dueDate) - new Date()) / (1000 * 60 * 60 * 24));
+                    return daysUntil <= 7 && daysUntil >= 0;
+                }).length
+            };
+
+            return (
+                <div>
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <div className="stat-label">Total Pieces</div>
+                            <div className="stat-value">{stats.totalPieces}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Average Progress</div>
+                            <div className="stat-value">{stats.avgProgress}%</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-label">Due This Week</div>
+                            <div className="stat-value">{stats.upcomingDeadlines}</div>
+                        </div>
+                    </div>
+
+                    <h2 style={{marginBottom: '1rem', fontSize: '1.5rem'}}>Composers</h2>
+
+                    {composers.length === 0 ? (
+                        <div className="empty-state">
+                            <h3>No Composers Yet</h3>
+                            <p>Add your first composer to get started!</p>
+                            <button className="button" onClick={() => openModal('addComposer')}>
+                                + Add Composer
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="composer-gallery">
+                            {composers.map(composer => (
+                                <div
+                                    key={composer.id}
+                                    className="composer-card"
+                                    onClick={() => navigateToComposer(composer)}
+                                >
+                                    <div className="composer-image">
+                                        {composer.emoji || '🎵'}
+                                    </div>
+                                    <div className="composer-name">{composer.name}</div>
+                                    <div className="composer-piece-count">
+                                        {pieces.filter(p => p.composerId === composer.id).length} pieces
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Composer View Component
+        function ComposerView({ composer, pieces, navigateToPiece, navigateHome, openModal }) {
+            return (
+                <div>
+                    <button className="back-button" onClick={navigateHome}>
+                        ← Back to Composers
+                    </button>
+
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
+                        <div>
+                            <h2 style={{fontSize: '2rem', fontWeight: '700', marginBottom: '0.5rem'}}>
+                                {composer.emoji} {composer.name}
+                            </h2>
+                            <p style={{color: '#666'}}>{pieces.length} pieces in progress</p>
+                        </div>
+                        <button className="button" onClick={() => openModal('addPiece')}>
+                            + Add Piece
+                        </button>
+                    </div>
+
+                    {pieces.length === 0 ? (
+                        <div className="empty-state">
+                            <h3>No Pieces Yet</h3>
+                            <p>Add your first piece by {composer.name}!</p>
+                        </div>
+                    ) : (
+                        <div className="piece-list">
+                            {pieces.map(piece => (
+                                <div
+                                    key={piece.id}
+                                    className="piece-item"
+                                    onClick={() => navigateToPiece(piece)}
+                                >
+                                    <div className="piece-info">
+                                        <h3>{piece.title}</h3>
+                                        <div className="piece-meta">
+                                            <span>Due: {new Date(piece.dueDate).toLocaleDateString()}</span>
+                                            <span className={`difficulty-badge difficulty-${piece.difficulty}`}>
+                                                {piece.difficulty}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style={{textAlign: 'right'}}>
+                                        <div style={{fontSize: '1.5rem', fontWeight: '700', color: '#6577FF', marginBottom: '0.5rem'}}>
+                                            {piece.progress}%
+                                        </div>
+                                        <div className="progress-bar">
+                                            <div
+                                                className="progress-fill"
+                                                style={{width: `${piece.progress}%`}}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Piece Detail View Component
+        function PieceDetailView({ piece, pieces, savePieces, navigateHome, composers }) {
+            const [annotations, setAnnotations] = useState(piece.notes || []);
+            const [pdfDoc, setPdfDoc] = useState(null);
+            const canvasRef = useRef(null);
+            const containerRef = useRef(null);
+            const fileInputRef = useRef(null);
+
+            const composer = composers.find(c => c.id === piece.composerId);
+
+            useEffect(() => {
+                if (piece.pdfUrl) {
+                    loadPDF(piece.pdfUrl);
+                }
+            }, [piece.pdfUrl]);
+
+            const loadPDF = async (url) => {
+                try {
+                    const pdf = await pdfjsLib.getDocument(url).promise;
+                    setPdfDoc(pdf);
+                    renderPage(pdf, 1);
+                } catch (error) {
+                    console.error('Error loading PDF:', error);
+                }
+            };
+
+            const renderPage = async (pdf, pageNum) => {
+                const page = await pdf.getPage(pageNum);
+                const canvas = canvasRef.current;
+                const context = canvas.getContext('2d');
+
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+            };
+
+            const handlePDFUpload = (e) => {
+                const file = e.target.files[0];
+                if (file && file.type === 'application/pdf') {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const updatedPieces = pieces.map(p =>
+                            p.id === piece.id ? {...p, pdfUrl: event.target.result} : p
+                        );
+                        savePieces(updatedPieces);
+                        loadPDF(event.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleCanvasClick = (e) => {
+                if (!pdfDoc) return;
+
+                const rect = canvasRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const newAnnotation = {
+                    id: Date.now().toString(),
+                    x: x,
+                    y: y,
+                    text: ''
+                };
+
+                const newAnnotations = [...annotations, newAnnotation];
+                setAnnotations(newAnnotations);
+                updatePieceNotes(newAnnotations);
+            };
+
+            const updateAnnotation = (id, text) => {
+                const newAnnotations = annotations.map(a =>
+                    a.id === id ? {...a, text} : a
+                );
+                setAnnotations(newAnnotations);
+                updatePieceNotes(newAnnotations);
+            };
+
+            const deleteAnnotation = (id) => {
+                const newAnnotations = annotations.filter(a => a.id !== id);
+                setAnnotations(newAnnotations);
+                updatePieceNotes(newAnnotations);
+            };
+
+            const updatePieceNotes = (newAnnotations) => {
+                const updatedPieces = pieces.map(p =>
+                    p.id === piece.id ? {...p, notes: newAnnotations} : p
+                );
+                savePieces(updatedPieces);
+            };
+
+            const updateProgress = (newProgress) => {
+                const updatedPieces = pieces.map(p =>
+                    p.id === piece.id ? {...p, progress: newProgress} : p
+                );
+                savePieces(updatedPieces);
+            };
+
+            return (
+                <div>
+                    <button className="back-button" onClick={navigateHome}>
+                        ← Back to Home
+                    </button>
+
+                    <div className="piece-detail">
+                        <div className="piece-header">
+                            <h2>{piece.title}</h2>
+                            <div className="piece-header-meta">
+                                <span style={{fontSize: '1.1rem', color: '#666'}}>
+                                    {composer?.emoji} {composer?.name}
+                                </span>
+                                <span className={`difficulty-badge difficulty-${piece.difficulty}`}>
+                                    {piece.difficulty}
+                                </span>
+                                <span style={{fontSize: '1rem'}}>
+                                    📅 Due: {new Date(piece.dueDate).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Progress: {piece.progress}%</label>
+                            <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={piece.progress}
+                                onChange={(e) => updateProgress(parseInt(e.target.value))}
+                                style={{width: '100%'}}
+                            />
+                            <div className="progress-bar" style={{width: '100%', height: '12px', marginTop: '0.5rem'}}>
+                                <div
+                                    className="progress-fill"
+                                    style={{width: `${piece.progress}%`}}
+                                ></div>
+                            </div>
+                        </div>
+
+                        <div className="action-buttons">
+                            <button
+                                className="button"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                📄 {piece.pdfUrl ? 'Change' : 'Upload'} Sheet Music (PDF)
+                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pdf"
+                                style={{display: 'none'}}
+                                onChange={handlePDFUpload}
+                            />
+                        </div>
+
+                        {piece.pdfUrl && (
+                            <div>
+                                <h3 style={{marginTop: '2rem', marginBottom: '1rem'}}>
+                                    Sheet Music
+                                    <span style={{fontSize: '0.9rem', fontWeight: 'normal', color: '#666', marginLeft: '1rem'}}>
+                                        Click to add teacher notes
+                                    </span>
+                                </h3>
+                                <div className="pdf-viewer-container" ref={containerRef}>
+                                    <canvas
+                                        ref={canvasRef}
+                                        id="pdf-canvas"
+                                        onClick={handleCanvasClick}
+                                        style={{cursor: 'crosshair'}}
+                                    ></canvas>
+                                    {annotations.map(annotation => (
+                                        <AnnotationMarker
+                                            key={annotation.id}
+                                            annotation={annotation}
+                                            updateAnnotation={updateAnnotation}
+                                            deleteAnnotation={deleteAnnotation}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {!piece.pdfUrl && (
+                            <div className="empty-state">
+                                <h3>No Sheet Music Uploaded</h3>
+                                <p>Upload a PDF to view and annotate your sheet music</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Annotation Marker Component
+        function AnnotationMarker({ annotation, updateAnnotation, deleteAnnotation }) {
+            const [isEditing, setIsEditing] = useState(!annotation.text);
+            const [showPopup, setShowPopup] = useState(!annotation.text);
+            const [text, setText] = useState(annotation.text);
+
+            const handleSave = () => {
+                updateAnnotation(annotation.id, text);
+                setIsEditing(false);
+                setShowPopup(false);
+            };
+
+            const handleDelete = () => {
+                deleteAnnotation(annotation.id);
+            };
+
+            return (
+                <>
+                    <div
+                        className={`annotation-marker ${annotation.text ? 'has-comment' : ''}`}
+                        style={{
+                            left: `${annotation.x}px`,
+                            top: `${annotation.y}px`
+                        }}
+                        onClick={() => setShowPopup(!showPopup)}
+                    >
+                        {annotation.text ? '📝' : '+'}
+                    </div>
+                    {showPopup && (
+                        <div
+                            className="annotation-popup"
+                            style={{
+                                left: `${annotation.x + 30}px`,
+                                top: `${annotation.y}px`
+                            }}
+                        >
+                            {isEditing ? (
+                                <>
+                                    <textarea
+                                        value={text}
+                                        onChange={(e) => setText(e.target.value)}
+                                        placeholder="Add teacher notes..."
+                                        autoFocus
+                                    />
+                                    <div className="annotation-buttons">
+                                        <button className="button small" onClick={handleSave}>
+                                            Save
+                                        </button>
+                                        <button className="button small danger" onClick={handleDelete}>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <p style={{marginBottom: '0.5rem'}}>{annotation.text}</p>
+                                    <div className="annotation-buttons">
+                                        <button className="button small" onClick={() => setIsEditing(true)}>
+                                            Edit
+                                        </button>
+                                        <button className="button small danger" onClick={handleDelete}>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </>
+            );
+        }
+
+        // Calendar View Component
+        function CalendarView({ pieces, composers, navigateToPiece }) {
+            const [currentDate, setCurrentDate] = useState(new Date());
+
+            const getDaysInMonth = (date) => {
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                const startingDayOfWeek = firstDay.getDay();
+
+                const days = [];
+
+                // Previous month days
+                const prevMonthLastDay = new Date(year, month, 0).getDate();
+                for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+                    days.push({
+                        date: prevMonthLastDay - i,
+                        isCurrentMonth: false,
+                        fullDate: new Date(year, month - 1, prevMonthLastDay - i)
+                    });
+                }
+
+                // Current month days
+                for (let i = 1; i <= daysInMonth; i++) {
+                    days.push({
+                        date: i,
+                        isCurrentMonth: true,
+                        fullDate: new Date(year, month, i)
+                    });
+                }
+
+                // Next month days
+                const remainingDays = 42 - days.length; // 6 weeks
+                for (let i = 1; i <= remainingDays; i++) {
+                    days.push({
+                        date: i,
+                        isCurrentMonth: false,
+                        fullDate: new Date(year, month + 1, i)
+                    });
+                }
+
+                return days;
+            };
+
+            const getPiecesForDate = (date) => {
+                const dateStr = date.toISOString().split('T')[0];
+                return pieces.filter(p => p.dueDate === dateStr);
+            };
+
+            const previousMonth = () => {
+                setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+            };
+
+            const nextMonth = () => {
+                setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+            };
+
+            const days = getDaysInMonth(currentDate);
+            const today = new Date().toDateString();
+
+            return (
+                <div className="calendar-container">
+                    <div className="calendar-header">
+                        <h2>
+                            {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        </h2>
+                        <div className="calendar-nav">
+                            <button className="button small" onClick={previousMonth}>
+                                ← Previous
+                            </button>
+                            <button className="button small" onClick={nextMonth}>
+                                Next →
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="calendar-grid">
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            <div key={day} className="calendar-day-header">{day}</div>
+                        ))}
+                        {days.map((day, index) => {
+                            const isToday = day.fullDate.toDateString() === today;
+                            const piecesForDay = getPiecesForDate(day.fullDate);
+
+                            return (
+                                <div
+                                    key={index}
+                                    className={`calendar-day ${!day.isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}`}
+                                >
+                                    <div className="day-number">{day.date}</div>
+                                    {piecesForDay.map(piece => {
+                                        const composer = composers.find(c => c.id === piece.composerId);
+                                        return (
+                                            <div
+                                                key={piece.id}
+                                                className="calendar-piece"
+                                                onClick={() => navigateToPiece(piece)}
+                                                title={`${piece.title} - ${composer?.name}`}
+                                            >
+                                                {piece.title}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        }
+
+        // Modal Component
+        function Modal({ type, closeModal, composers, saveComposers, pieces, savePieces, selectedComposer }) {
+            const [formData, setFormData] = useState({
+                name: '',
+                emoji: '🎵',
+                title: '',
+                difficulty: 'medium',
+                dueDate: '',
+                progress: 0
+            });
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+
+                if (type === 'addComposer') {
+                    const newComposer = {
+                        id: Date.now().toString(),
+                        name: formData.name,
+                        emoji: formData.emoji
+                    };
+                    saveComposers([...composers, newComposer]);
+                } else if (type === 'addPiece') {
+                    const newPiece = {
+                        id: Date.now().toString(),
+                        composerId: selectedComposer.id,
+                        title: formData.title,
+                        progress: formData.progress,
+                        difficulty: formData.difficulty,
+                        dueDate: formData.dueDate,
+                        notes: [],
+                        pdfUrl: null
+                    };
+                    savePieces([...pieces, newPiece]);
+                }
+
+                closeModal();
+            };
+
+            return (
+                <div className="modal-overlay" onClick={closeModal}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>{type === 'addComposer' ? 'Add Composer' : 'Add Piece'}</h3>
+                            <button className="close-button" onClick={closeModal}>×</button>
+                        </div>
+
+                        <form onSubmit={handleSubmit}>
+                            {type === 'addComposer' && (
+                                <>
+                                    <div className="form-group">
+                                        <label>Composer Name</label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Emoji Icon</label>
+                                        <input
+                                            type="text"
+                                            value={formData.emoji}
+                                            onChange={(e) => setFormData({...formData, emoji: e.target.value})}
+                                            placeholder="🎵"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {type === 'addPiece' && (
+                                <>
+                                    <div className="form-group">
+                                        <label>Piece Title</label>
+                                        <input
+                                            type="text"
+                                            value={formData.title}
+                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Difficulty</label>
+                                        <select
+                                            value={formData.difficulty}
+                                            onChange={(e) => setFormData({...formData, difficulty: e.target.value})}
+                                        >
+                                            <option value="easy">Easy</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="hard">Hard</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Due Date</label>
+                                        <input
+                                            type="date"
+                                            value={formData.dueDate}
+                                            onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Initial Progress: {formData.progress}%</label>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={formData.progress}
+                                            onChange={(e) => setFormData({...formData, progress: parseInt(e.target.value)})}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="action-buttons">
+                                <button type="submit" className="button">
+                                    {type === 'addComposer' ? 'Add Composer' : 'Add Piece'}
+                                </button>
+                                <button type="button" className="button secondary" onClick={closeModal}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
