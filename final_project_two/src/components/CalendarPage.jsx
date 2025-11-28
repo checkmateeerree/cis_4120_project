@@ -1,17 +1,11 @@
 import React from 'react';
 import CalendarAIAssistant from './CalendarAIAssistant';
 
-function CalendarPage({ pieces, currentMonthDate, onChangeMonth }) {
+function CalendarPage({ pieces, currentMonthDate, onChangeMonth, onOpenPiece }) {
   const year = currentMonthDate.getFullYear();
   const month = currentMonthDate.getMonth();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = new Date();
-
-  const isSameDay = (d) =>
-    d.getFullYear() === today.getFullYear() &&
-    d.getMonth() === today.getMonth() &&
-    d.getDate() === today.getDate();
 
   const cells = [];
   for (let i = 0; i < firstDayOfWeek; i++) {
@@ -37,7 +31,7 @@ function CalendarPage({ pieces, currentMonthDate, onChangeMonth }) {
         <div>
           <div className="page-title">{monthLabel}</div>
           <div className="page-subtitle">
-            Piece due dates, plus an AI study plan.
+            AI study plan and calendar view.
           </div>
         </div>
       </header>
@@ -75,19 +69,23 @@ function CalendarPage({ pieces, currentMonthDate, onChangeMonth }) {
               );
             }
             const dayPieces = piecesOnDate(date);
-            const isToday = isSameDay(date);
             return (
               <div key={date.toISOString()} className="calendar-cell">
-                <div
-                  className={
-                    "calendar-date" +
-                    (isToday ? " calendar-date-today" : "")
-                  }
-                >
+                <div className="calendar-date">
                   {date.getDate()}
                 </div>
                 {dayPieces.map((p) => (
-                  <div key={p.id} className="calendar-badge">
+                  <div
+                    key={p.id}
+                    className="calendar-badge calendar-badge-clickable"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onOpenPiece && p.composerId) {
+                        onOpenPiece(p.composerId, p.id);
+                      }
+                    }}
+                    title={p.title}
+                  >
                     {p.title}
                   </div>
                 ))}
@@ -96,22 +94,6 @@ function CalendarPage({ pieces, currentMonthDate, onChangeMonth }) {
           })}
         </div>
 
-        <div className="calendar-legend">
-          <div className="legend-item">
-            <span
-              className="legend-swatch"
-              style={{ borderColor: "#0A0A18" }}
-            />
-            <span>Piece due date</span>
-          </div>
-          <div className="legend-item">
-            <span
-              className="legend-swatch"
-              style={{ background: "#e6f0ff" }}
-            />
-            <span>Today</span>
-          </div>
-        </div>
 
         <CalendarAIAssistant pieces={pieces} />
       </div>

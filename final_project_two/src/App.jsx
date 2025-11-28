@@ -9,7 +9,7 @@ import SearchOverlay from './components/SearchOverlay';
 import ProgressModal from './components/ProgressModal';
 
 function App() {
-  const [composers, setComposers] = useState([]); // start empty
+  const [composers, setComposers] = useState([]); 
   const [view, setView] = useState("home"); // home | composer | piece | addComposer | calendar
   const [selectedComposerId, setSelectedComposerId] = useState(null);
   const [selectedPieceId, setSelectedPieceId] = useState(null);
@@ -17,7 +17,6 @@ function App() {
   const [progressModalPiece, setProgressModalPiece] = useState(null);
   const [calendarMonthOffset, setCalendarMonthOffset] = useState(0);
 
-  // feather icons
   useEffect(() => {
     if (window.feather) {
       window.feather.replace();
@@ -88,7 +87,6 @@ function App() {
     );
   }
 
-  // for highlights + annotations
   function updatePiecePdfData(composerId, pieceId, pdfHighlights, pdfNotes) {
     updatePiece(composerId, pieceId, () => ({
       pdfHighlights,
@@ -117,10 +115,47 @@ function App() {
     setProgressModalPiece({ ...piece, composerId });
   }
 
-  function applyProgress(pieceInfo, newProgress) {
+  function applyProgress(pieceInfo, newPagesCompleted) {
     updatePiece(pieceInfo.composerId, pieceInfo.id, () => ({
-      progress: newProgress,
+      pagesCompleted: newPagesCompleted,
     }));
+  }
+
+  function updatePieceTotalPages(composerId, pieceId, totalPages) {
+    updatePiece(composerId, pieceId, (piece) => {
+      if (!piece.totalPages || piece.totalPages === 1) {
+        return { totalPages: totalPages };
+      }
+      return {};
+    });
+  }
+
+  function deleteComposer(composerId) {
+    if (window.confirm("Are you sure you want to delete this composer and all their pieces? This action cannot be undone.")) {
+      setComposers((prev) => prev.filter((c) => c.id !== composerId));
+      if (selectedComposerId === composerId) {
+        setView("home");
+        setSelectedComposerId(null);
+      }
+    }
+  }
+
+  function deletePiece(composerId, pieceId) {
+    if (window.confirm("Are you sure you want to delete this piece? This action cannot be undone.")) {
+      setComposers((prev) =>
+        prev.map((c) => {
+          if (c.id !== composerId) return c;
+          return {
+            ...c,
+            pieces: c.pieces.filter((p) => p.id !== pieceId),
+          };
+        })
+      );
+      if (selectedPieceId === pieceId) {
+        setView("composer");
+        setSelectedPieceId(null);
+      }
+    }
   }
 
   const currentMonthDate = useMemo(() => {
@@ -139,6 +174,7 @@ function App() {
               composers={composers}
               onOpenComposer={openComposer}
               onOpenAddComposer={() => setView("addComposer")}
+              onDeleteComposer={deleteComposer}
             />
           )}
 
@@ -155,6 +191,8 @@ function App() {
               onOpenProgressModal={(piece) =>
                 openProgressModal(piece, selectedComposer.id)
               }
+              onDeleteComposer={() => deleteComposer(selectedComposer.id)}
+              onDeletePiece={(pieceId) => deletePiece(selectedComposer.id, pieceId)}
             />
           )}
 
@@ -177,6 +215,10 @@ function App() {
                   pdfNotes
                 )
               }
+              onUpdateTotalPages={(totalPages) =>
+                updatePieceTotalPages(selectedComposer.id, selectedPiece.id, totalPages)
+              }
+              onDeletePiece={() => deletePiece(selectedComposer.id, selectedPiece.id)}
             />
           )}
 
@@ -197,6 +239,9 @@ function App() {
               onChangeMonth={(delta) =>
                 setCalendarMonthOffset((m) => m + delta)
               }
+              onOpenPiece={(composerId, pieceId) => {
+                openPiece(composerId, pieceId);
+              }}
             />
           )}
         </div>

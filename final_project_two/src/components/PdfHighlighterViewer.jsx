@@ -1,12 +1,113 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { hexToRgba } from '../utils';
 
+function AnnotationMarker({ annotation, onMarkerClick, onDelete, onUpdate }) {
+  const [showComment, setShowComment] = useState(false);
+  const [commentText, setCommentText] = useState(annotation.text || '');
+  const [isEditing, setIsEditing] = useState(!annotation.text);
+  const commentRef = useRef(null);
+
+  useEffect(() => {
+    if (showComment && isEditing && commentRef.current) {
+      commentRef.current.focus();
+    }
+  }, [showComment, isEditing]);
+
+  const handleMarkerClick = (e) => {
+    e.stopPropagation();
+    setShowComment(!showComment);
+    if (!annotation.text) {
+      setIsEditing(true);
+    }
+  };
+
+  const handleSave = () => {
+    onUpdate({ ...annotation, text: commentText });
+    setIsEditing(false);
+  };
+
+  const handleDelete = () => {
+    onDelete(annotation.id);
+    setShowComment(false);
+  };
+
+  const handleClose = () => {
+    setShowComment(false);
+    setIsEditing(false);
+    if (!annotation.text) {
+      setCommentText('');
+    }
+  };
+
+  return (
+    <>
+      <div
+        className={`annotation-marker ${annotation.text ? 'has-comment' : ''}`}
+        style={{
+          left: `${annotation.x}px`,
+          top: `${annotation.y}px`,
+        }}
+        onClick={handleMarkerClick}
+        title={annotation.text || 'Click to add comment'}
+      >
+        {annotation.text ? '•' : '+'}
+      </div>
+      {showComment && (
+        <div
+          className="annotation-comment"
+          style={{
+            left: `${annotation.x + 30}px`,
+            top: `${annotation.y}px`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {isEditing ? (
+            <>
+              <textarea
+                ref={commentRef}
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Enter your comment..."
+              />
+              <div className="annotation-comment-actions">
+                <button className="save-button" onClick={handleSave}>
+                  Save
+                </button>
+                <button className="close-button" onClick={handleClose}>
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: '8px' }}>{annotation.text}</div>
+              <div className="annotation-comment-actions">
+                <button className="save-button" onClick={() => setIsEditing(true)}>
+                  Edit
+                </button>
+                <button className="delete-button" onClick={handleDelete}>
+                  Delete
+                </button>
+                <button className="close-button" onClick={handleClose}>
+                  Close
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 function PdfHighlighterViewer({
   file,
   pdfHighlights,
   pdfNotes,
   activeTag,
+  deleteMode = false,
   onUpdatePdfData,
+  onUpdateTotalPages,
 }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -14,9 +115,11 @@ function PdfHighlighterViewer({
   const [pdfDoc, setPdfDoc] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [numPages, setNumPages] = useState(1);
+  const [selectedAnnotation, setSelectedAnnotation] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPos, setStartPos] = useState(null);
   const [currentHighlight, setCurrentHighlight] = useState(null);
+  const [highlightHistory, setHighlightHistory] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,8 +131,13 @@ function PdfHighlighterViewer({
         const pdf = await loadingTask.promise;
         if (cancelled) return;
         setPdfDoc(pdf);
-        setNumPages(pdf.numPages || 1);
+        const pages = pdf.numPages || 1;
+        setNumPages(pages);
         setPageNumber(1);
+        setHighlightHistory([]);
+        if (onUpdateTotalPages) {
+          onUpdateTotalPages(pages);
+        }
       } catch (e) {
         console.error("Error loading PDF", e);
       }
@@ -61,7 +169,7 @@ function PdfHighlighterViewer({
   }, [pdfDoc, pageNumber]);
 
   const pageHighlights = (pdfHighlights && pdfHighlights[pageNumber]) || [];
-  const pageNotes = (pdfNotes && pdfNotes[pageNumber]) || [];
+  const pageAnnotations = (pdfNotes && pdfNotes[pageNumber]) || [];
 
   function currentColors() {
     const base = activeTag?.baseHex || "#FFD747";
@@ -72,7 +180,15 @@ function PdfHighlighterViewer({
   }
 
   function handleMouseDown(e) {
-    if (!containerRef.current) return;
+    if (deleteMode) return;
+    
+    if (e.target.classList.contains('highlight') || 
+        e.target.closest('.highlight') ||
+        e.target.closest('.annotation-marker') ||
+        e.target.closest('.annotation-comment')) {
+      return;
+    }
+    if (!containerRef.current || e.target.tagName !== 'CANVAS') return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -103,9 +219,10 @@ function PdfHighlighterViewer({
       currentHighlight.height > 5
     ) {
       const { bg, border } = currentColors();
+      const highlightId = Date.now();
       const newHighlight = {
         ...currentHighlight,
-        id: Date.now(),
+        id: highlightId,
         bg,
         border,
       };
@@ -114,6 +231,7 @@ function PdfHighlighterViewer({
         ...(pdfHighlights || {}),
         [pageNumber]: newPageHighlights,
       };
+      setHighlightHistory(prev => [...prev, { pageNumber, highlightId }]);
       onUpdatePdfData(newPdfHighlights, pdfNotes || {});
     }
     setIsDrawing(false);
@@ -122,28 +240,62 @@ function PdfHighlighterViewer({
   }
 
   function handleDoubleClick(e) {
-    if (!containerRef.current) return;
+    if (deleteMode) return;
+    if (!containerRef.current || e.target.tagName !== 'CANVAS') return;
+    
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
-    const text = window.prompt("Add annotation text:");
-    if (!text || !text.trim()) return;
-
-    const newNote = {
+    
+    const newAnnotation = {
       id: Date.now(),
-      x,
-      y,
-      text: text.trim(),
+      x: x - 10,
+      y: y - 10,
+      text: ''
     };
-
-    const newPageNotes = [...pageNotes, newNote];
+    
+    const newPageAnnotations = [...pageAnnotations, newAnnotation];
     const newPdfNotes = {
       ...(pdfNotes || {}),
-      [pageNumber]: newPageNotes,
+      [pageNumber]: newPageAnnotations,
+    };
+    onUpdatePdfData(pdfHighlights || {}, newPdfNotes);
+    setSelectedAnnotation(newAnnotation.id);
+  }
+
+  function handleAnnotationUpdate(updatedAnnotation) {
+    const newPageAnnotations = pageAnnotations.map(ann => 
+      ann.id === updatedAnnotation.id ? updatedAnnotation : ann
+    );
+    const newPdfNotes = {
+      ...(pdfNotes || {}),
+      [pageNumber]: newPageAnnotations,
     };
     onUpdatePdfData(pdfHighlights || {}, newPdfNotes);
   }
+
+  function handleAnnotationDelete(id) {
+    const newPageAnnotations = pageAnnotations.filter(ann => ann.id !== id);
+    const newPdfNotes = {
+      ...(pdfNotes || {}),
+      [pageNumber]: newPageAnnotations,
+    };
+    onUpdatePdfData(pdfHighlights || {}, newPdfNotes);
+    if (selectedAnnotation === id) {
+      setSelectedAnnotation(null);
+    }
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.annotation-marker') && !e.target.closest('.annotation-comment')) {
+        setSelectedAnnotation(null);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   function goPage(delta) {
     setPageNumber((prev) => {
@@ -154,12 +306,47 @@ function PdfHighlighterViewer({
     });
   }
 
+  function handleUndo() {
+    if (highlightHistory.length === 0) return;
+    
+    const lastHighlight = highlightHistory[highlightHistory.length - 1];
+    const { pageNumber: targetPage, highlightId } = lastHighlight;
+    
+    const targetPageHighlights = (pdfHighlights && pdfHighlights[targetPage]) || [];
+    const updatedPageHighlights = targetPageHighlights.filter(h => h.id !== highlightId);
+    
+    const newPdfHighlights = {
+      ...(pdfHighlights || {}),
+      [targetPage]: updatedPageHighlights,
+    };
+    
+    setHighlightHistory(prev => prev.slice(0, -1));
+    
+    onUpdatePdfData(newPdfHighlights, pdfNotes || {});
+  }
+
+  function handleHighlightClick(e, highlightId) {
+    e.stopPropagation();
+    if (!deleteMode) return;
+    
+    const updatedPageHighlights = pageHighlights.filter(h => h.id !== highlightId);
+    const newPdfHighlights = {
+      ...(pdfHighlights || {}),
+      [pageNumber]: updatedPageHighlights,
+    };
+    
+    setHighlightHistory(prev => prev.filter(h => 
+      !(h.pageNumber === pageNumber && h.highlightId === highlightId)
+    ));
+    
+    onUpdatePdfData(newPdfHighlights, pdfNotes || {});
+  }
+
   return (
     <div>
       <div className="pdf-controls">
         <div style={{ fontSize: 13, color: "#757595" }}>
-          Highlight by dragging on the PDF. Double-click anywhere to add a text
-          note.
+          Drag to highlight. Double-click to add a text annotation marker.
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button
@@ -186,13 +373,27 @@ function PdfHighlighterViewer({
           <button
             type="button"
             className="secondary-button"
-            onClick={() =>
+            onClick={handleUndo}
+            disabled={highlightHistory.length === 0}
+            style={{ fontSize: 11, paddingInline: 10 }}
+            title="Undo last highlight"
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => {
+              const pageHighlightIds = pageHighlights.map(h => h.id);
+              setHighlightHistory(prev => prev.filter(h => 
+                !(h.pageNumber === pageNumber && pageHighlightIds.includes(h.highlightId))
+              ));
               onUpdatePdfData(
                 { ...(pdfHighlights || {}), [pageNumber]: [] },
                 { ...(pdfNotes || {}), [pageNumber]: [] }
-              )
-            }
-            disabled={pageHighlights.length === 0 && pageNotes.length === 0}
+              );
+            }}
+            disabled={pageHighlights.length === 0 && pageAnnotations.length === 0}
             style={{ fontSize: 11, paddingInline: 10 }}
           >
             Clear page
@@ -223,7 +424,24 @@ function PdfHighlighterViewer({
                 height: `${h.height}px`,
                 backgroundColor: h.bg,
                 borderColor: h.border,
+                cursor: deleteMode ? 'pointer' : 'default',
+                opacity: deleteMode ? 1 : 1,
+                transition: deleteMode ? 'opacity 0.2s ease, border-width 0.2s ease' : 'none',
               }}
+              onClick={(e) => handleHighlightClick(e, h.id)}
+              onMouseEnter={(e) => {
+                if (deleteMode) {
+                  e.currentTarget.style.opacity = '0.7';
+                  e.currentTarget.style.borderWidth = '3px';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (deleteMode) {
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.borderWidth = '2px';
+                }
+              }}
+              title={deleteMode ? "Click to delete highlight" : ""}
             />
           ))}
 
@@ -244,26 +462,14 @@ function PdfHighlighterViewer({
             );
           })()}
 
-          {pageNotes.map((note) => (
-            <div
-              key={note.id}
-              style={{
-                position: "absolute",
-                left: `${note.x}px`,
-                top: `${note.y}px`,
-                transform: "translate(-50%, -110%)",
-                background: "#ffffff",
-                borderRadius: 8,
-                border: "1px solid #e1e1f0",
-                padding: "4px 6px",
-                fontSize: 10,
-                maxWidth: 180,
-                boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
-                color: "#555",
-              }}
-            >
-              {note.text}
-            </div>
+          {pageAnnotations.map((annotation) => (
+            <AnnotationMarker
+              key={annotation.id}
+              annotation={annotation}
+              onMarkerClick={handleAnnotationUpdate}
+              onDelete={handleAnnotationDelete}
+              onUpdate={handleAnnotationUpdate}
+            />
           ))}
         </div>
       </div>
@@ -276,4 +482,3 @@ function PdfHighlighterViewer({
 }
 
 export default PdfHighlighterViewer;
-

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 
 function ProgressModal({ piece, onClose, onSave }) {
-  const [value, setValue] = useState(piece.progress);
+  const totalPages = piece.totalPages || 1;
+  const [value, setValue] = useState(piece.pagesCompleted || 0);
+  const percentage = totalPages > 0 ? Math.round((value / totalPages) * 100) : 0;
 
   function handleSave() {
     onSave(Number(value));
@@ -15,12 +17,12 @@ function ProgressModal({ piece, onClose, onSave }) {
           <input
             type="range"
             min="0"
-            max="100"
+            max={totalPages}
             value={value}
             onChange={(e) => setValue(e.target.value)}
           />
-          <div style={{ width: 70, textAlign: "right", fontSize: 14 }}>
-            {value}% Learned
+          <div style={{ width: 120, textAlign: "right", fontSize: 14 }}>
+            {value} / {totalPages} pages ({percentage}%)
           </div>
         </div>
         <div className="modal-footer">

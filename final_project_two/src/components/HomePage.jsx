@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatDueText } from '../utils';
 
-function HomePage({ composers, onOpenComposer, onOpenAddComposer }) {
+function HomePage({ composers, onOpenComposer, onOpenAddComposer, onDeleteComposer }) {
   function nextDueForComposer(composer) {
     if (!composer.pieces.length) return null;
     const upcoming = [...composer.pieces].sort(
@@ -12,8 +12,8 @@ function HomePage({ composers, onOpenComposer, onOpenAddComposer }) {
 
   return (
     <>
-      <header className="page-header">
-        <div>
+      <header className="page-header-home">
+        <div className="page-header-content">
           <div className="page-title">Music Organization App</div>
           <div className="page-subtitle">
             Start by adding a composer, then upload their pieces and files.
@@ -27,11 +27,13 @@ function HomePage({ composers, onOpenComposer, onOpenAddComposer }) {
       </header>
 
       {composers.length === 0 ? (
-        <div className="form-card">
-          <div style={{ fontSize: 14, marginBottom: 12 }}>
-            You don't have any composers yet.
+        <div className="empty-state">
+          <div className="empty-state-icon">🎵</div>
+          <div className="empty-state-title">No composers yet</div>
+          <div className="empty-state-text">
+            Get started by adding your first composer to organize their pieces and practice schedule.
           </div>
-          <button className="primary-button" onClick={onOpenAddComposer}>
+          <button className="primary-button primary-button-lg" onClick={onOpenAddComposer}>
             Add your first composer
           </button>
         </div>
@@ -41,42 +43,57 @@ function HomePage({ composers, onOpenComposer, onOpenAddComposer }) {
             {composers.map((composer) => {
               const upcoming = nextDueForComposer(composer);
               return (
-                <button
+                <div
                   key={composer.id}
                   className="composer-card"
-                  onClick={() => onOpenComposer(composer.id)}
                 >
-                  <div className="composer-next-piece">
-                    {upcoming
-                      ? formatDueText(upcoming.dueDate)
-                      : "No pieces yet"}
-                  </div>
-                  <div className="composer-avatar">
-                    {composer.portrait ? (
-                      <img
-                        src={composer.portrait.dataUrl}
-                        alt={composer.name}
-                      />
-                    ) : (
-                      <div className="composer-avatar-initial">
-                        {composer.name[0]}
-                      </div>
-                    )}
-                  </div>
-                  <div className="composer-name">{composer.name}</div>
-                </button>
+                  <button
+                    className="composer-card-content"
+                    onClick={() => onOpenComposer(composer.id)}
+                  >
+                    <div className="composer-avatar">
+                      {composer.portrait ? (
+                        <img
+                          src={composer.portrait.dataUrl}
+                          alt={composer.name}
+                        />
+                      ) : (
+                        <div className="composer-avatar-initial">
+                          {composer.name[0]}
+                        </div>
+                      )}
+                    </div>
+                    <div className="composer-name">{composer.name}</div>
+                    <div className="composer-next-piece">
+                      {upcoming
+                        ? formatDueText(upcoming.dueDate)
+                        : "No pieces yet"}
+                    </div>
+                  </button>
+                  <button
+                    className="delete-button-small"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteComposer(composer.id);
+                    }}
+                    style={{ marginTop: '8px' }}
+                  >
+                    Delete
+                  </button>
+                </div>
               );
             })}
             <button
-              className="composer-card"
+              className="composer-card composer-card-add"
               type="button"
               onClick={onOpenAddComposer}
             >
-              <div className="composer-next-piece">&nbsp;</div>
               <div className="composer-avatar composer-add">
                 <div className="composer-add-plus">+</div>
               </div>
               <div className="composer-name">Add Composer</div>
+              <div className="composer-next-piece">&nbsp;</div>
             </button>
           </section>
         </>
@@ -86,4 +103,3 @@ function HomePage({ composers, onOpenComposer, onOpenAddComposer }) {
 }
 
 export default HomePage;
-

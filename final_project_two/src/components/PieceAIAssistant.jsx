@@ -19,7 +19,10 @@ function PieceAIAssistant({ composer, piece }) {
 
     const contextParts = [];
     contextParts.push("You are a helpful music learning assistant.");
-    contextParts.push(`Piece: ${piece.title} (progress: ${piece.progress}%)`);
+    const totalPages = piece.totalPages || 1;
+    const pagesCompleted = piece.pagesCompleted || 0;
+    const progressPercentage = totalPages > 0 ? Math.round((pagesCompleted / totalPages) * 100) : 0;
+    contextParts.push(`Piece: ${piece.title} (${pagesCompleted}/${totalPages} pages completed, ${progressPercentage}%)`);
     contextParts.push(`Composer: ${composer.name}`);
     contextParts.push(
       `Due date: ${formatDate(piece.dueDate)} (${piece.dueDate})`
@@ -37,10 +40,11 @@ function PieceAIAssistant({ composer, piece }) {
     const fullPrompt =
       contextParts.join("\n") +
       "\n\nStudent question:\n" +
-      question.trim();
+      question.trim() +
+      "\n\nIMPORTANT: Please keep your response concise and under 400 words to ensure the complete response is delivered.";
 
     try {
-      const responseText = await callLLM(fullPrompt);
+      const responseText = await callLLM(fullPrompt, 2000);
       setAnswer(responseText);
     } catch (e) {
       setError(
@@ -56,12 +60,13 @@ function PieceAIAssistant({ composer, piece }) {
   return (
     <div className="ai-card">
       <div className="ai-title">AI Help for this Piece</div>
-      <div style={{ fontSize: 12, color: "#757595", marginBottom: 8 }}>
+      <div style={{ fontSize: 12, color: "#757595", marginBottom: 12 }}>
         Ask about fingerings, technical challenges, practice strategies,
         interpretation, etc.
       </div>
       <textarea
         className="input-textarea"
+        style={{ width: "100%", boxSizing: "border-box" }}
         placeholder="e.g. What are the main technical challenges in the opening section?"
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
@@ -69,7 +74,7 @@ function PieceAIAssistant({ composer, piece }) {
       <button
         type="button"
         className="primary-button"
-        style={{ width: "100%", marginTop: 4 }}
+        style={{ width: "100%", marginTop: 12 }}
         onClick={handleAsk}
         disabled={loading}
       >

@@ -17,7 +17,21 @@ export function formatDueText(dateStr) {
 }
 
 export function formatDate(dateStr) {
-  const d = new Date(dateStr);
+  if (!dateStr) return "";
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) {
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr || "";
+    return d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const d = new Date(year, month, day);
   if (Number.isNaN(d.getTime())) return dateStr || "";
   return d.toLocaleDateString(undefined, {
     month: "short",
@@ -35,7 +49,23 @@ export function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-export async function callLLM(prompt) {
+export function stripMarkdown(text) {
+  if (!text) return text;
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+    .replace(/~~(.*?)~~/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export async function callLLM(prompt, maxTokens = 2000) {
   if (!window.CONFIG || !CONFIG.MISTRAL_API_KEY) {
     throw new Error("Missing CONFIG.MISTRAL_API_KEY (check config.js)");
   }
@@ -50,7 +80,7 @@ export async function callLLM(prompt) {
       model: "mistral-medium-latest",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
-      max_tokens: 1000,
+      max_tokens: maxTokens,
     }),
   });
 
@@ -58,7 +88,8 @@ export async function callLLM(prompt) {
     throw new Error(`API error: ${res.status}`);
   }
   const data = await res.json();
-  return data.choices?.[0]?.message?.content || "(no response)";
+  const responseText = data.choices?.[0]?.message?.content || "(no response)";
+  return stripMarkdown(responseText);
 }
 
 

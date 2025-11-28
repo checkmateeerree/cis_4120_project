@@ -4,7 +4,6 @@ function AddPieceForm({ onCancel, onCreate }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [pdfFile, setPdfFile] = useState(null);
-  const [audioFile, setAudioFile] = useState(null);
   const [error, setError] = useState("");
 
   function readFileAsDataUrl(file, callback) {
@@ -38,14 +37,14 @@ function AddPieceForm({ onCancel, onCreate }) {
       id: pieceId,
       title: title.trim(),
       dueDate,
-      progress: 0,
+      pagesCompleted: 0,
+      totalPages: 1, // Will be updated when PDF is loaded
       sections: [
         { id: "s1", label: "Measures 1–4", tag: null },
         { id: "s2", label: "Measures 5–8", tag: null },
       ],
       files: {
         pdf: pdfFile,
-        audio: audioFile || null,
       },
       pdfHighlights: {},
       pdfNotes: {},
@@ -61,16 +60,10 @@ function AddPieceForm({ onCancel, onCreate }) {
     }
   }
 
-  function handleAudioChange(e) {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      readFileAsDataUrl(file, setAudioFile);
-    }
-  }
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="form-card">
+      <div className="form-card form-card-full-width">
         <div className="form-row">
           <label className="form-label">Piece Title</label>
           <input
@@ -98,24 +91,12 @@ function AddPieceForm({ onCancel, onCreate }) {
             onChange={handlePdfChange}
           />
           {pdfFile && (
-            <div className="file-meta">PDF selected: {pdfFile.name}</div>
-          )}
-        </div>
-        <div className="form-row">
-          <label className="form-label">Optional Audio (mp3)</label>
-          <input
-            className="input-file"
-            type="file"
-            accept=".mp3,audio/mpeg"
-            onChange={handleAudioChange}
-          />
-          {audioFile && (
-            <div className="file-meta">Audio selected: {audioFile.name}</div>
+            <div className="file-meta" style={{ marginTop: 6 }}>PDF selected: {pdfFile.name}</div>
           )}
         </div>
         {error && <div className="error-text">{error}</div>}
         <div
-          style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}
+          style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}
         >
           <button
             type="button"

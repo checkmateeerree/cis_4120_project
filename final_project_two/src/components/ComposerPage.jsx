@@ -8,6 +8,8 @@ function ComposerPage({
   onOpenPiece,
   onAddPiece,
   onOpenProgressModal,
+  onDeleteComposer,
+  onDeletePiece,
 }) {
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -25,13 +27,22 @@ function ComposerPage({
             </div>
           </div>
         </div>
-        <button
-          className="primary-button"
-          type="button"
-          onClick={() => setShowAddForm((s) => !s)}
-        >
-          + Add New Piece
-        </button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            className="delete-button"
+            type="button"
+            onClick={onDeleteComposer}
+          >
+            Delete Composer
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={() => setShowAddForm((s) => !s)}
+          >
+            + Add New Piece
+          </button>
+        </div>
       </header>
 
       <section className="card-list">
@@ -60,9 +71,24 @@ function ComposerPage({
                 }}
               >
                 <div className="progress-text">
-                  {piece.progress}% Learned
+                  {(() => {
+                    const totalPages = piece.totalPages || 1;
+                    const pagesCompleted = piece.pagesCompleted || 0;
+                    const percentage = totalPages > 0 ? Math.round((pagesCompleted / totalPages) * 100) : 0;
+                    return `${pagesCompleted} / ${totalPages} pages (${percentage}%)`;
+                  })()}
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button
+                    className="delete-button-small"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeletePiece(piece.id);
+                    }}
+                  >
+                    Delete
+                  </button>
                   <button
                     className="secondary-button"
                     onClick={() => onOpenProgressModal(piece)}
@@ -81,7 +107,13 @@ function ComposerPage({
             <div className="piece-progress-bar">
               <div
                 className="piece-progress-fill"
-                style={{ width: `${piece.progress}%` }}
+                style={{ 
+                  width: `${(() => {
+                    const totalPages = piece.totalPages || 1;
+                    const pagesCompleted = piece.pagesCompleted || 0;
+                    return totalPages > 0 ? Math.round((pagesCompleted / totalPages) * 100) : 0;
+                  })()}%` 
+                }}
               />
             </div>
           </div>
@@ -89,7 +121,7 @@ function ComposerPage({
       </section>
 
       {showAddForm && (
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: 16 }}>
           <AddPieceForm
             onCancel={() => setShowAddForm(false)}
             onCreate={(piece) => {

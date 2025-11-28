@@ -11,9 +11,16 @@ function PiecePage({
   onSetSectionTag,
   onOpenProgressModal,
   onUpdatePdfData,
+  onUpdateTotalPages,
+  onDeletePiece,
 }) {
   const [activeTagId, setActiveTagId] = useState("difficult");
+  const [deleteMode, setDeleteMode] = useState(false);
   const activeTag = getTagDef(activeTagId) || TAG_DEFS[0];
+  
+  const totalPages = piece.totalPages || 1;
+  const pagesCompleted = piece.pagesCompleted || 0;
+  const progressPercentage = totalPages > 0 ? Math.round((pagesCompleted / totalPages) * 100) : 0;
 
   return (
     <>
@@ -29,16 +36,25 @@ function PiecePage({
             </div>
           </div>
         </div>
-        <button
-          className="piece-progress-pill"
-          onClick={() => onOpenProgressModal(piece)}
-        >
-          {piece.progress}% Learned ✏️
-        </button>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button
+            className="delete-button"
+            type="button"
+            onClick={onDeletePiece}
+          >
+            Delete Piece
+          </button>
+          <button
+            className="piece-progress-pill"
+            onClick={() => onOpenProgressModal(piece)}
+          >
+            {pagesCompleted} / {totalPages} pages ({progressPercentage}%) ✏️
+          </button>
+        </div>
       </header>
 
       <div className="piece-layout">
-        <div>
+        <div className="piece-left-column">
           <div
             style={{
               marginBottom: 12,
@@ -46,9 +62,9 @@ function PiecePage({
               color: "#757595",
             }}
           >
-            Choose a tag (color), then drag on the PDF to highlight.  
-            Click on measure rows to assign the same tags.  
-            Double-click on the PDF to add a text note.
+            {deleteMode 
+              ? "Delete mode: Click on highlights to delete them."
+              : "Choose a tag (color), then drag on the PDF to highlight. Double-click on the PDF to add a text note."}
           </div>
           <div
             style={{
@@ -64,16 +80,21 @@ function PiecePage({
                 type="button"
                 className={
                   "secondary-button" +
-                  (activeTagId === tag.id ? " tag-active" : "")
+                  (activeTagId === tag.id && !deleteMode ? " tag-active" : "")
                 }
                 style={{
                   borderRadius: 999,
                   borderColor:
-                    activeTagId === tag.id ? "#0A0A18" : "#e1e1f0",
+                    activeTagId === tag.id && !deleteMode ? "#0A0A18" : "#e1e1f0",
                   boxShadow:
-                    activeTagId === tag.id ? "0 0 0 1px #0A0A18" : "none",
+                    activeTagId === tag.id && !deleteMode ? "0 0 0 1px #0A0A18" : "none",
+                  opacity: deleteMode ? 0.5 : 1,
                 }}
-                onClick={() => setActiveTagId(tag.id)}
+                onClick={() => {
+                  setActiveTagId(tag.id);
+                  setDeleteMode(false);
+                }}
+                disabled={deleteMode}
               >
                 <span
                   style={{
@@ -87,6 +108,27 @@ function PiecePage({
                 {tag.label}
               </button>
             ))}
+            <button
+              type="button"
+              className={
+                "secondary-button" +
+                (deleteMode ? " tag-active" : "")
+              }
+              style={{
+                borderRadius: 999,
+                borderColor: deleteMode ? "#c33" : "#e1e1f0",
+                boxShadow: deleteMode ? "0 0 0 1px #c33" : "none",
+                color: deleteMode ? "#c33" : "#666",
+              }}
+              onClick={() => {
+                setDeleteMode(!deleteMode);
+                if (!deleteMode) {
+                  setActiveTagId(null);
+                }
+              }}
+            >
+              🗑️ Delete
+            </button>
           </div>
 
           <div className="pdf-shell">
@@ -95,67 +137,16 @@ function PiecePage({
                 file={piece.files.pdf}
                 pdfHighlights={piece.pdfHighlights || {}}
                 pdfNotes={piece.pdfNotes || {}}
-                activeTag={activeTag}
+                activeTag={deleteMode ? null : activeTag}
+                deleteMode={deleteMode}
                 onUpdatePdfData={onUpdatePdfData}
+                onUpdateTotalPages={onUpdateTotalPages}
               />
             ) : (
               <div style={{ fontSize: 13, color: "#757595" }}>
                 No PDF uploaded for this piece.
               </div>
             )}
-          </div>
-
-          <div style={{ marginTop: 16 }}>
-            <div
-              style={{
-                fontSize: 12,
-                color: "#757595",
-                marginBottom: 6,
-              }}
-            >
-              Measure tags:
-            </div>
-            {piece.sections.map((section) => {
-              const tagDef = getTagDef(section.tag);
-              return (
-                <div
-                  key={section.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 4,
-                    cursor: "pointer",
-                  }}
-                  onClick={() =>
-                    onSetSectionTag(
-                      section.id,
-                      section.tag === activeTagId ? null : activeTagId
-                    )
-                  }
-                >
-                  <div
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: "50%",
-                      border: "1px solid #ddd",
-                      background: tagDef ? tagDef.color : "transparent",
-                    }}
-                  />
-                  <span style={{ fontSize: 12 }}>{section.label}</span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "#757595",
-                      marginLeft: "auto",
-                    }}
-                  >
-                    {tagDef ? tagDef.label : "No tag"}
-                  </span>
-                </div>
-              );
-            })}
           </div>
 
           {piece.files.audio && (
@@ -173,7 +164,7 @@ function PiecePage({
           )}
         </div>
 
-        <div>
+        <div className="piece-right-column">
           <PieceAIAssistant composer={composer} piece={piece} />
         </div>
       </div>
