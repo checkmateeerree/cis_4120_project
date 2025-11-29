@@ -4,6 +4,7 @@ function AddPieceForm({ onCancel, onCreate }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [pdfFile, setPdfFile] = useState(null);
+  const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState("");
 
   function readFileAsDataUrl(file, callback) {
@@ -38,7 +39,7 @@ function AddPieceForm({ onCancel, onCreate }) {
       title: title.trim(),
       dueDate,
       pagesCompleted: 0,
-      totalPages: 1, // Will be updated when PDF is loaded
+      totalPages: totalPages,
       sections: [
         { id: "s1", label: "Measures 1–4", tag: null },
         { id: "s2", label: "Measures 5–8", tag: null },
@@ -53,10 +54,23 @@ function AddPieceForm({ onCancel, onCreate }) {
     onCreate(piece);
   }
 
-  function handlePdfChange(e) {
+  async function handlePdfChange(e) {
     const file = e.target.files && e.target.files[0];
     if (file) {
-      readFileAsDataUrl(file, setPdfFile);
+      readFileAsDataUrl(file, async (fileData) => {
+        setPdfFile(fileData);
+        if (window.pdfjsLib && fileData.dataUrl) {
+          try {
+            const loadingTask = window.pdfjsLib.getDocument(fileData.dataUrl);
+            const pdf = await loadingTask.promise;
+            const pages = pdf.numPages || 1;
+            setTotalPages(pages);
+          } catch (e) {
+            console.error("Error reading PDF pages", e);
+            setTotalPages(1);
+          }
+        }
+      });
     }
   }
 

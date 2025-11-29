@@ -88,13 +88,11 @@ function PiecePage({
                     activeTagId === tag.id && !deleteMode ? "#0A0A18" : "#e1e1f0",
                   boxShadow:
                     activeTagId === tag.id && !deleteMode ? "0 0 0 1px #0A0A18" : "none",
-                  opacity: deleteMode ? 0.5 : 1,
                 }}
                 onClick={() => {
                   setActiveTagId(tag.id);
                   setDeleteMode(false);
                 }}
-                disabled={deleteMode}
               >
                 <span
                   style={{
