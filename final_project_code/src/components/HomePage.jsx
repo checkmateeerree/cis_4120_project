@@ -14,7 +14,7 @@ function HomePage({ composers, onOpenComposer, onOpenAddComposer, onDeleteCompos
     <>
       <header className="page-header-home">
         <div className="page-header-content">
-          <div className="page-title">Music Organization App</div>
+          <div className="page-title">Music Learning Organizer</div>
           <div className="page-subtitle">
             Start by adding a composer, then upload their pieces and files.
           </div>
