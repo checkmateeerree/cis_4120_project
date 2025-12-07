@@ -56,7 +56,7 @@ The app requires a Mistral API key for AI assistant features. You need to config
    - Visit [Mistral AI](https://mistral.ai/) to sign up and get an API key
    - Replace `'your-mistral-api-key-here'` with your actual API key
 
-   **Note**: If you don't have an API key, the app will still run, but AI assistant features will not work.
+   **Note**: Alternatively, please refer to Assignment Doc A5 to find a usable Mistral API Key.
 
 ## Running the Application
 
